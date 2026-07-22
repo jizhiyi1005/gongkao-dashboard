@@ -830,8 +830,9 @@ function addError(){
 function exportErrorsHTML(){
   const filteredErrors=getFilteredErrors();
   if(filteredErrors.length===0){alert('没有可导出的错题');return}
-  let md='# 📕 知知的错题本\n\n';
-  md+='> 导出时间：'+new Date().toLocaleString()+' | 共'+filteredErrors.length+'题\n\n';
+  let txt='📕 知知的错题本\n';
+  txt+='导出时间：'+new Date().toLocaleString()+' | 共'+filteredErrors.length+'题\n';
+  txt+='━━━━━━━━━━━━━━━━━━━━\n\n';
   const grouped={};
   filteredErrors.forEach(e=>{
     const sec=e.section||'未分类';
@@ -839,18 +840,18 @@ function exportErrorsHTML(){
     grouped[sec].push(e);
   });
   Object.entries(grouped).forEach(([sec,errors])=>{
-    md+='## '+sec+'（'+errors.length+'题）\n\n';
+    txt+='【'+sec+'】（'+errors.length+'题）\n\n';
     errors.forEach((e,i)=>{
-      md+='### '+(i+1)+'. '+e.question+'\n\n';
-      md+='**错误原因**：'+e.category+'\n\n';
-      if(e.analysis) md+='**解析**：'+e.analysis+'\n\n';
-      md+='---\n\n';
+      txt+=(i+1)+'. '+e.question+'\n';
+      txt+='   错因：'+e.category+'\n';
+      if(e.analysis) txt+='   解析：'+e.analysis+'\n';
+      txt+='\n';
     });
   });
-  const blob=new Blob([md],{type:'text/markdown;charset=utf-8'});
+  const blob=new Blob([txt],{type:'text/plain;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
-  a.href=url;a.download='知知错题本_'+today()+'.md';
+  a.href=url;a.download='知知错题本_'+today()+'.txt';
   document.body.appendChild(a);a.click();document.body.removeChild(a);
   URL.revokeObjectURL(url);
   filteredErrors.forEach(e=>{e.exported=true});
@@ -863,32 +864,25 @@ function exportDailyReport(){
   const tTotal=todayRecs.reduce((a,r)=>a+r.total,0);
   const tCorrect=todayRecs.reduce((a,r)=>a+r.correct,0);
   const acc=tTotal>0?Math.round(tCorrect/tTotal*100):0;
-  let md='# 📊 学习日报\n\n';
-  md+='> '+t+'\n\n';
-  md+='| 做题 | 正确 | 正确率 | 积分 |\n';
-  md+='|------|------|--------|------|\n';
-  md+='| '+tTotal+' | '+tCorrect+' | '+acc+'% | '+D.points+' |\n\n';
+  let txt='📊 学习日报\n';
+  txt+=t+'\n';
+  txt+='━━━━━━━━━━━━━━━━━━━━\n';
+  txt+='做题：'+tTotal+'  正确：'+tCorrect+'  正确率：'+acc+'%  积分：'+D.points+'\n\n';
   if(todayTasks.length){
     const done=todayTasks.filter(x=>x.done).length;
-    md+='## 📋 任务（'+done+'/'+todayTasks.length+'）\n\n';
-    todayTasks.forEach(t=>{
-      md+='- '+(t.done?'✅':'⬜')+' '+t.name+'\n';
-    });
-    md+='\n';
+    txt+='📋 任务（'+done+'/'+todayTasks.length+'）\n';
+    todayTasks.forEach(t=>{txt+='  '+(t.done?'✅':'⬜')+' '+t.name+'\n';});
+    txt+='\n';
   }
   if(todayRecs.length){
-    md+='## 📝 做题\n\n';
-    md+='| 板块 | 正确/总数 | 正确率 |\n';
-    md+='|------|-----------|--------|\n';
-    todayRecs.forEach(r=>{
-      md+='| '+r.type+' | '+r.correct+'/'+r.total+' | '+Math.round(r.correct/r.total*100)+'% |\n';
-    });
-    md+='\n';
+    txt+='📝 做题\n';
+    todayRecs.forEach(r=>{txt+='  '+r.type+'：'+r.correct+'/'+r.total+'（'+Math.round(r.correct/r.total*100)+'%）\n';});
+    txt+='\n';
   }
-  const blob=new Blob([md],{type:'text/markdown;charset=utf-8'});
+  const blob=new Blob([txt],{type:'text/plain;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
-  a.href=url;a.download='学习日报_'+t+'.md';
+  a.href=url;a.download='学习日报_'+t+'.txt';
   document.body.appendChild(a);a.click();document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
