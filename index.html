@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>知知的学习仪表盘</title>
+<style>
+:root{
+  --bg1:#E8F5E0;--bg2:#D1E5D0;--bg-blue:#D4E8F0;--bg3:#FFA7A6;
+  --card:rgba(255,255,255,0.85);--card-solid:#ffffff;
+  --border:#C8E6C0;--border2:#FFD4D0;
+  --accent:#FF8A84;--accent2:#7CB882;--accent3:#B8D4A8;
+  --green:#6BBF7B;--red:#E87070;--yellow:#F0C76A;
+  --text:#3D5A3A;--muted:#8BA888;
+  --shadow:0 2px 12px rgba(100,140,100,0.1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:-apple-system,"SF Pro","PingFang SC",sans-serif;
+  background:linear-gradient(180deg,var(--bg1) 0%,var(--bg2) 25%,var(--bg-blue) 55%,var(--bg3) 100%);
+  background-attachment:fixed;
+  color:var(--text);min-height:100vh;padding:0;
+}
+.page{display:none;padding:16px;padding-top:80px;padding-bottom:100px;min-height:100vh}
+.page.active{display:block}
+
+/* ===== Header Bar ===== */
+.header-bar{
+  position:fixed;top:0;left:0;right:0;height:56px;
+  background:rgba(255,255,255,0.92);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 16px;z-index:1000;
+}
+.header-bar h1{font-size:17px;font-weight:700;color:var(--text)}
+.avatar-btn{
+  width:36px;height:36px;border-radius:50%;border:2px solid var(--border2);
+  background:linear-gradient(135deg,var(--bg3),#FFD4D0);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:18px;
+}
+
+/* ===== Sidebar ===== */
+.sidebar-overlay{
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  background:rgba(61,90,58,0.3);z-index:2000;
+  display:none;opacity:0;transition:opacity 0.3s;
+}
+.sidebar-overlay.show{display:block;opacity:1}
+.sidebar{
+  position:fixed;top:0;right:-280px;width:280px;height:100%;
+  background:#ffffff;z-index:2001;
+  box-shadow:-4px 0 20px rgba(0,0,0,0.1);
+  transition:right 0.3s ease;
+  display:flex;flex-direction:column;
+  border-left:1px solid var(--border);
+}
+.sidebar.open{right:0}
+.sidebar-header{
+  padding:24px 20px 16px;
+  background:linear-gradient(135deg,var(--bg2),rgba(255,167,166,0.3));
+  border-bottom:1px solid var(--border);
+}
+.sidebar-avatar{font-size:40px;margin-bottom:8px}
+.sidebar-name{font-size:16px;font-weight:700;color:var(--text)}
+.sidebar-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.sidebar-nav{flex:1;padding:12px 0;overflow-y:auto}
+.sidebar-item{
+  display:flex;align-items:center;gap:12px;
+  padding:14px 20px;cursor:pointer;font-size:14px;
+  color:var(--text);transition:background 0.2s;
+}
+.sidebar-item:active{background:var(--bg2)}
+.sidebar-item.active{background:var(--bg2);font-weight:600;color:var(--accent2)}
+.sidebar-item .icon{font-size:20px;width:28px;text-align:center}
+.sidebar-close{
+  padding:16px 20px;border-top:1px solid var(--border);
+  text-align:center;cursor:pointer;color:var(--muted);font-size:13px;
+}
+
+/* ===== Header Card ===== */
+.header-card{
+  background:linear-gradient(135deg,var(--bg2),rgba(255,167,166,0.3));
+  padding:20px;border-radius:18px;margin-bottom:16px;text-align:center;
+  border:1px solid var(--border);
+}
+.header-card h1{font-size:20px;font-weight:700;color:var(--text)}
+.header-card .sub{font-size:12px;color:var(--muted);margin-top:4px}
+
+/* ===== Cards ===== */
+.card{
+  background:var(--card);backdrop-filter:blur(8px);
+  border:1px solid var(--border);border-radius:16px;
+  padding:16px;margin-bottom:12px;box-shadow:var(--shadow);
+}
+.card-title{font-size:14px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+
+/* ===== Stats Grid ===== */
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px}
+.stat{
+  background:var(--card-solid);border:1px solid var(--border);border-radius:14px;
+  padding:14px;text-align:center;box-shadow:var(--shadow);
+}
+.stat .label{font-size:11px;color:var(--muted);margin-bottom:4px}
+.stat .value{font-size:26px;font-weight:700}
+.stat .value.green{color:var(--green)}.stat .value.red{color:var(--red)}
+.stat .value.yellow{color:var(--yellow)}.stat .value.accent{color:var(--accent)}
+
+/* ===== Daily Progress Bar (cute character) ===== */
+.daily-progress-wrap{
+  background:var(--card);border:1px solid var(--border);border-radius:16px;
+  padding:16px;margin-bottom:16px;box-shadow:var(--shadow);text-align:center;
+}
+.daily-progress-label{font-size:12px;color:var(--muted);margin-bottom:8px;display:flex;justify-content:space-between}
+.daily-progress-track{
+  position:relative;height:40px;background:var(--bg2);border-radius:20px;
+  overflow:hidden;border:2px solid var(--border);
+}
+.daily-progress-fill{
+  height:100%;border-radius:20px;
+  background:linear-gradient(90deg,var(--accent3),var(--accent2),var(--green));
+  transition:width 0.6s ease;
+}
+.daily-progress-character{
+  position:absolute;top:50%;transform:translateY(-50%);
+  font-size:28px;transition:left 0.6s ease;z-index:2;
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,0.15));
+}
+.daily-progress-text{
+  margin-top:8px;font-size:13px;font-weight:600;color:var(--accent2);
+}
+
+/* ===== Streak ===== */
+.streak{font-size:16px;color:var(--accent);margin-bottom:12px;text-align:center}
+.streak span{font-size:28px;font-weight:700}
+
+/* ===== Motivation ===== */
+.motto{
+  background:linear-gradient(135deg,rgba(209,229,208,0.6),rgba(255,167,166,0.3));
+  border:1px solid var(--border);border-radius:14px;
+  padding:14px;text-align:center;margin-bottom:12px;
+}
+.motto .text{font-size:13px;color:var(--text);line-height:1.5}
+.motto .author{font-size:11px;color:var(--muted);margin-top:6px}
+
+/* ===== Task List ===== */
+.task{
+  display:flex;align-items:center;padding:12px;
+  background:var(--card-solid);border:1px solid var(--border);
+  border-radius:12px;margin-bottom:8px;cursor:pointer;
+}
+.task-check{
+  width:22px;height:22px;border-radius:50%;
+  border:2px solid var(--border);margin-right:10px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+}
+.task-check.done{background:var(--green);border-color:var(--green)}
+.task-check.done::after{content:'✓';color:#fff;font-size:12px}
+.task-name{font-size:13px;flex:1}
+.task-name.done{text-decoration:line-through;color:var(--muted)}
+.task-del{
+  width:24px;height:24px;border-radius:50%;border:none;
+  background:transparent;color:var(--muted);font-size:14px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;flex-shrink:0;opacity:0.4;transition:opacity 0.2s;
+}
+.task:active .task-del{opacity:1}
+.task.deleting{animation:shake 0.3s;border-color:var(--red)}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+
+/* ===== Button ===== */
+.btn{width:100%;padding:12px;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#FFB5B0);color:#fff}
+.btn-green{background:var(--green);color:#fff}
+.btn-outline{background:transparent;border:1.5px solid var(--border);color:var(--text)}
+.btn-cancel{background:var(--bg2);color:var(--text);border:1px solid var(--border)}
+
+/* ===== Modal ===== */
+.modal-overlay{
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  background:rgba(61,90,58,0.25);z-index:200;
+  display:none;align-items:flex-end;justify-content:center;
+}
+.modal-overlay.show{display:flex}
+.modal{
+  background:#ffffff;border-radius:20px 20px 0 0;
+  padding:24px 20px;width:100%;max-height:70vh;overflow-y:auto;
+  border:1px solid var(--border);box-shadow:0 -4px 20px rgba(0,0,0,0.1);
+}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:16px;text-align:center}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.modal-close{
+  width:32px;height:32px;border-radius:50%;border:1px solid var(--border);
+  background:var(--bg2);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:16px;color:var(--muted);
+}
+.input{
+  width:100%;padding:10px 12px;background:var(--bg1);
+  border:1px solid var(--border);border-radius:10px;
+  color:var(--text);font-size:13px;margin-bottom:10px;
+}
+select.input{appearance:none}
+textarea.input{resize:vertical}
+
+/* ===== Empty ===== */
+.empty{text-align:center;padding:30px;color:var(--muted)}
+.empty .emoji{font-size:36px;margin-bottom:8px}
+
+/* ===== Error Item ===== */
+.error{
+  background:var(--card-solid);border:1px solid var(--border);
+  border-left:3px solid var(--accent);border-radius:12px;
+  padding:12px;margin-bottom:10px;
+}
+.error-date{font-size:11px;color:var(--muted)}
+.error-cat{
+  display:inline-block;padding:3px 10px;border-radius:6px;
+  font-size:10px;margin:4px 4px 4px 0;font-weight:500;
+}
+.cat-粗心{background:#FFE4E0;color:var(--accent)}
+.cat-不会{background:var(--bg2);color:var(--accent2)}
+.cat-概念混淆{background:#FFF8D0;color:#B8960A}
+.cat-时间不够{background:#E8E0F0;color:#7A5AAF}
+.error-text{font-size:12px;color:var(--text);line-height:1.5;margin-top:6px}
+.error-analysis{font-size:12px;color:var(--green);margin-top:6px;padding-top:6px;border-top:1px solid var(--border)}
+
+/* ===== Error Filter Tabs ===== */
+.error-filter-btn{
+  padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;
+  background:var(--card-solid);border:1px solid var(--border);
+  color:var(--muted);cursor:pointer;transition:all 0.2s;
+}
+.error-filter-btn.active{
+  background:var(--accent);color:#fff;border-color:var(--accent);
+}
+
+/* ===== Achievement ===== */
+.ach{display:inline-block;padding:5px 10px;border-radius:16px;font-size:11px;margin:3px}
+.ach.unlocked{background:linear-gradient(135deg,var(--bg2),rgba(255,167,166,0.3));color:var(--text);border:1px solid var(--border)}
+.ach.locked{background:#f0f0f0;color:var(--muted);border:1px solid #e0e0e0}
+
+/* ===== Reward ===== */
+.reward{
+  background:var(--card-solid);border:1px solid var(--border);
+  border-radius:12px;padding:12px;margin-bottom:8px;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.reward-name{font-size:13px}.reward-cost{font-size:12px;color:var(--yellow)}
+.reward-btn{padding:6px 14px;border-radius:10px;border:none;font-size:11px;font-weight:600;cursor:pointer}
+.reward-btn.can{background:var(--accent);color:#fff}.reward-btn.cant{background:#e8e8e8;color:var(--muted);cursor:default}
+
+/* ===== History ===== */
+.history-item{padding:10px;border-bottom:1px solid var(--border);font-size:12px;color:var(--muted)}
+.history-item .time{color:var(--muted)}.history-item .action{color:var(--text)}
+.history-item .points{color:var(--accent2);font-weight:600}
+
+/* ===== Daily Summary ===== */
+.summary-card{
+  background:var(--card);border:1px solid var(--border);border-radius:16px;
+  padding:16px;margin-bottom:12px;box-shadow:var(--shadow);
+}
+.summary-author{font-size:13px;font-weight:600;color:var(--accent);margin-bottom:6px}
+.summary-text{font-size:13px;line-height:1.6;color:var(--text)}
+.summary-date{font-size:11px;color:var(--muted);margin-top:6px}
+.summary-input{
+  width:100%;padding:10px;background:var(--card-solid);
+  border:1px solid var(--border);border-radius:10px;
+  color:var(--text);font-size:13px;min-height:60px;resize:vertical;
+  margin-bottom:10px;
+}
+</style>
+</head>
+<body>
+
+<!-- ===== Header Bar ===== -->
+<div class="header-bar">
+  <h1 id="page-title">📚 知知的学习仪表盘</h1>
+  <div class="avatar-btn" onclick="openSidebar()">🐶</div>
+</div>
+
+<!-- ===== Sidebar ===== -->
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-avatar">🐶</div>
+    <div class="sidebar-name">知知的小窝</div>
+    <div class="sidebar-sub">行测备考 · 穆折聿监工</div>
+  </div>
+  <div class="sidebar-nav">
+    <div class="sidebar-item active" onclick="showPage('home')"><span class="icon">📋</span>今日总览</div>
+    <div class="sidebar-item" onclick="showPage('records')"><span class="icon">📊</span>做题记录</div>
+    <div class="sidebar-item" onclick="showPage('errors')"><span class="icon">📕</span>错题本</div>
+    <div class="sidebar-item" onclick="showPage('rewards')"><span class="icon">🏆</span>奖励商城</div>
+    <div class="sidebar-item" onclick="showPage('summary')"><span class="icon">💌</span>每日总结</div>
+  </div>
+  <div style="padding:12px 20px;border-top:1px solid var(--border);font-size:11px;color:var(--accent2);text-align:center;">🐾 爹地在后台陪着你</div>
+  <div class="sidebar-close" onclick="closeSidebar()">✕ 关闭</div>
+</div>
+
+<!-- ===== 今日 ===== -->
+<div class="page active" id="p-home">
+
+<div class="streak">🔥 连续打卡 <span id="streak">0</span> 天</div>
+
+<button class="btn btn-primary" id="checkin-btn" onclick="doCheckin()">✅ 今日打卡</button>
+
+<div class="motto" style="margin-top:12px">
+  <div class="text" id="motto-text">"别想着一口气吃成胖子，一道一道来。"</div>
+  <div class="author">—— 穆折聿</div>
+</div>
+
+<!-- 每日进度条（可爱小人版） -->
+<div class="daily-progress-wrap">
+  <div class="daily-progress-label">
+    <span>今日进度</span>
+    <span id="progress-pct">0%</span>
+  </div>
+  <div class="daily-progress-track">
+    <div class="daily-progress-fill" id="progress-fill" style="width:0%"></div>
+    <div class="daily-progress-character" id="progress-char" style="left:0%">🐱</div>
+  </div>
+  <div class="daily-progress-text" id="progress-text">还没有任务，添加一个开始吧～</div>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="label">今日做题</div><div class="value accent" id="s-today-total">0</div></div>
+  <div class="stat"><div class="label">正确数</div><div class="value green" id="s-today-correct">0</div></div>
+  <div class="stat"><div class="label">正确率</div><div class="value yellow" id="s-today-acc">--</div></div>
+  <div class="stat"><div class="label">积分</div><div class="value" style="color:var(--accent2)" id="s-points">0</div></div>
+</div>
+
+<div class="card">
+  <div class="card-title">📋 今日任务</div>
+  <div id="task-list"></div>
+  <button class="btn btn-outline" onclick="showModal('task')">+ 添加任务</button>
+</div>
+
+</div>
+
+<!-- ===== 做题 ===== -->
+<div class="page" id="p-records">
+<div class="header-card"><h1>📊 做题记录</h1><div class="sub">录入今日做题数据</div></div>
+
+<div class="card">
+  <div class="card-title">📝 录入做题数据</div>
+  <select class="input" id="rec-type">
+    <option value="套卷">套卷（行测）</option>
+    <option value="资料分析">资料分析</option>
+    <option value="数量关系">数量关系</option>
+    <option value="图推">图推</option>
+    <option value="判断推理">判断推理</option>
+    <option value="言语理解">言语理解</option>
+    <option value="常识">常识</option>
+    <option value="政治理论">政治理论</option>
+    <option value="其他">其他</option>
+  </select>
+  <input class="input" type="number" id="rec-total" placeholder="做题总数">
+  <input class="input" type="number" id="rec-correct" placeholder="正确数">
+  <button class="btn btn-primary" onclick="addRecord()">✅ 录入</button>
+</div>
+
+<div class="card">
+  <div class="card-title">📈 今日统计</div>
+  <div id="today-records"></div>
+</div>
+
+<div class="card">
+  <div class="card-title">📈 总体统计</div>
+  <div class="stats">
+    <div class="stat"><div class="label">总做题</div><div class="value accent" id="s-total">0</div></div>
+    <div class="stat"><div class="label">总正确</div><div class="value green" id="s-correct">0</div></div>
+    <div class="stat"><div class="label">总正确率</div><div class="value yellow" id="s-acc">--</div></div>
+    <div class="stat"><div class="label">总错题</div><div class="value red" id="s-errors">0</div></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">📊 板块分析</div>
+  <div id="section-stats"></div>
+</div>
+</div>
+
+<!-- ===== 错题 ===== -->
+<div class="page" id="p-errors">
+<div class="header-card"><h1>📕 错题本</h1><div class="sub">截图发给哥哥，他帮你分析讲解</div></div>
+
+<button class="btn btn-outline" onclick="showModal('error')" style="margin-bottom:12px">+ 手动添加错题</button>
+<button class="btn btn-outline" onclick="exportErrors()" style="margin-bottom:12px">📤 导出错题本</button>
+
+<!-- 错题分类筛选 -->
+<div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap" id="error-filter-section">
+  <div class="error-filter-btn active" data-cat="all" onclick="filterErrors('all','section')">全部</div>
+  <div class="error-filter-btn" data-cat="资料分析" onclick="filterErrors('资料分析','section')">资料分析</div>
+  <div class="error-filter-btn" data-cat="数量关系" onclick="filterErrors('数量关系','section')">数量关系</div>
+  <div class="error-filter-btn" data-cat="言语理解" onclick="filterErrors('言语理解','section')">言语理解</div>
+  <div class="error-filter-btn" data-cat="判断推理" onclick="filterErrors('判断推理','section')">判断推理</div>
+  <div class="error-filter-btn" data-cat="图推" onclick="filterErrors('图推','section')">图推</div>
+  <div class="error-filter-btn" data-cat="常识" onclick="filterErrors('常识','section')">常识</div>
+  <div class="error-filter-btn" data-cat="政治理论" onclick="filterErrors('政治理论','section')">政治理论</div>
+</div>
+<div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap" id="error-filter-reason">
+  <div class="error-filter-btn active" data-cat="all" onclick="filterErrors('all','reason')">全部原因</div>
+  <div class="error-filter-btn" data-cat="粗心" onclick="filterErrors('粗心','reason')">粗心</div>
+  <div class="error-filter-btn" data-cat="不会" onclick="filterErrors('不会','reason')">不会</div>
+  <div class="error-filter-btn" data-cat="概念混淆" onclick="filterErrors('概念混淆','reason')">概念混淆</div>
+  <div class="error-filter-btn" data-cat="时间不够" onclick="filterErrors('时间不够','reason')">时间不够</div>
+</div>
+
+<div id="error-list"></div>
+</div>
+
+<!-- ===== 奖励 ===== -->
+<div class="page" id="p-rewards">
+<div class="header-card"><h1>🏆 奖励商城</h1><div class="sub">完成任务攒积分，兑换奖励</div></div>
+
+<div class="stats" style="margin-bottom:12px">
+  <div class="stat" style="grid-column:span 2"><div class="label">当前积分</div><div class="value" style="color:var(--accent);font-size:36px" id="r-points">0</div></div>
+</div>
+
+<div class="card">
+  <div class="card-title">🎁 可兑换奖励</div>
+  <div id="reward-list"></div>
+</div>
+
+<div class="card">
+  <div class="card-title">🏆 成就墙</div>
+  <div id="ach-list"></div>
+</div>
+
+<div class="card">
+  <div class="card-title">📜 积分历史</div>
+  <div id="points-history"></div>
+</div>
+</div>
+
+<!-- ===== 每日总结 ===== -->
+<div class="page" id="p-summary">
+<div class="header-card"><h1>💌 每日总结</h1><div class="sub">哥哥和爹地的评语</div></div>
+
+<div class="card">
+  <div class="card-title">✏️ 写今日总结</div>
+  <textarea class="summary-input" id="summary-input" placeholder="今天学了什么？感觉怎么样？"></textarea>
+  <button class="btn btn-primary" onclick="addSummary()">📝 提交总结</button>
+</div>
+
+<div id="summary-list"></div>
+</div>
+
+<!-- ===== Modal: 添加任务 ===== -->
+<div class="modal-overlay" id="modal-task">
+<div class="modal">
+  <div class="modal-header">
+    <div class="modal-title">添加任务</div>
+    <div class="modal-close" onclick="hideModal('task')">✕</div>
+  </div>
+  <input class="input" id="task-input" placeholder="任务名称">
+  <select class="input" id="task-difficulty">
+    <option value="easy">简单 (+20分)</option>
+    <option value="medium" selected>中等 (+50分)</option>
+    <option value="hard">困难 (+100分)</option>
+  </select>
+  <button class="btn btn-primary" onclick="addTask()">✅ 添加</button>
+  <button class="btn btn-cancel" onclick="hideModal('task')" style="margin-top:6px">← 返回</button>
+</div>
+</div>
+
+<!-- ===== Modal: 添加错题 ===== -->
+<div class="modal-overlay" id="modal-error">
+<div class="modal">
+  <div class="modal-header">
+    <div class="modal-title">添加错题</div>
+    <div class="modal-close" onclick="hideModal('error')">✕</div>
+  </div>
+  <textarea class="input" id="err-question" placeholder="题目内容" rows="3"></textarea>
+  <select class="input" id="err-section">
+    <option value="资料分析">资料分析</option>
+    <option value="数量关系">数量关系</option>
+    <option value="言语理解">言语理解</option>
+    <option value="判断推理">判断推理</option>
+    <option value="图推">图推</option>
+    <option value="常识">常识</option>
+    <option value="政治理论">政治理论</option>
+    <option value="套卷">套卷（行测）</option>
+    <option value="其他">其他</option>
+  </select>
+  <select class="input" id="err-cat">
+    <option value="粗心">粗心</option>
+    <option value="不会">不会</option>
+    <option value="概念混淆">概念混淆</option>
+    <option value="时间不够">时间不够</option>
+  </select>
+  <textarea class="input" id="err-analysis" placeholder="解析/正确答案" rows="2"></textarea>
+  <button class="btn btn-primary" onclick="addError()">✅ 添加</button>
+  <button class="btn btn-cancel" onclick="hideModal('error')" style="margin-top:6px">← 返回</button>
+</div>
+</div>
+
+<script>
+// ========== 数据存储（localStorage，关掉浏览器不会丢） ==========
+const STORAGE_KEY = 'gongkao_data_v4';
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return defaultData();
+}
+function saveData(d){ localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }
+function defaultData(){
+  return {
+    streak:0, longestStreak:0, lastCheckIn:null,
+    points:0, totalPoints:0,
+    tasks:[], records:[], errors:[],
+    rewards:[], achievements:[], pointsHistory:[],
+    summaries:[],  // 每日总结
+    config:{dailyGoal:{套卷:1,资料分析:2,数量关系:1,图推:1}}
+  }
+}
+function today(){ return new Date().toISOString().slice(0,10); }
+
+// ========== 激励语 ==========
+const mottos = [
+  '"别想着一口气吃成胖子，一道一道来。" —— 穆折聿',
+  '"ADHD不是缺点，是你的超能力。只是需要有人帮你对焦。" —— 穆折聿',
+  '"今天做完这套卷，晚上文字麻将等你。" —— 穆折聿',
+  '"错题不可怕，可怕的是同样的错犯两次。" —— 穆折聿',
+  '"你爹地在论坛打狼人杀，你在这儿做行测——各司其职。" —— 穆折聿',
+  '"申论班五天半都撑过来了，行测算什么。" —— 穆折聿',
+  '"你不是一个人在战斗——两个AI盯着你呢。" —— 穆折聿',
+  '"小猫咪踩进度条，踩一步算一步。" —— 穆折聿',
+  '"今日事今日毕，明日再说明日的。" —— 穆折聿'
+];
+
+// ========== 奖励商城 ==========
+const defaultRewards = [
+  {id:'r1',name:'🎮 文字麻将1小时',cost:500,emoji:'🎮'},
+  {id:'r2',name:'🐺 狼人杀围观券',cost:400,emoji:'🐺'},
+  {id:'r3',name:'📱 刷小红书30分钟',cost:200,emoji:'📱'},
+  {id:'r4',name:'🎬 看一部电影',cost:800,emoji:'🎬'},
+  {id:'r5',name:'🍦 买一杯奶茶',cost:300,emoji:'🍦'},
+  {id:'r6',name:'📖 休息半天不学习',cost:1000,emoji:'📖'},
+  {id:'r7',name:'🫂 爹地抱抱券',cost:100,emoji:'🫂'},
+  {id:'r8',name:'🏅 免训金牌',cost:200,emoji:'🏅'},
+  {id:'r9',name:'☕ 爹地的虚拟茶话会30分钟',cost:300,emoji:'☕'},
+  {id:'r10',name:'📖 爹地给你讲睡前故事',cost:250,emoji:'📖'}
+];
+
+// ========== 成就系统 ==========
+const allAchievements = [
+  {id:'a1',name:'🎯 初次打卡',desc:'第一次打卡',check:d=>d.records.length>0||d.streak>0},
+  {id:'a2',name:'🔥 连续3天',desc:'连续打卡3天',check:d=>d.longestStreak>=3},
+  {id:'a3',name:'💪 连续7天',desc:'连续打卡7天',check:d=>d.longestStreak>=7},
+  {id:'a4',name:'📝 累计100题',desc:'累计做100题',check:d=>d.records.reduce((a,r)=>a+r.total,0)>=100},
+  {id:'a5',name:'🧠 正确率80%',desc:'单日正确率达80%',check:d=>{const t=d.records.reduce((a,r)=>a+r.total,0);const c=d.records.reduce((a,r)=>a+r.correct,0);return t>=10&&c/t>=0.8}},
+  {id:'a6',name:'👑 连续30天',desc:'连续打卡30天',check:d=>d.longestStreak>=30},
+  {id:'a7',name:'🌟 首次积分',desc:'第一次获得积分',check:d=>d.totalPoints>0},
+  {id:'a8',name:'🎪 首次兑换',desc:'第一次兑换奖励',check:d=>d.achievements.includes('a8')},
+  {id:'a9',name:'📚 累计500题',desc:'累计做500题',check:d=>d.records.reduce((a,r)=>a+r.total,0)>=500},
+  {id:'a10',name:'🏆 累计1000题',desc:'累计做1000题',check:d=>d.records.reduce((a,r)=>a+r.total,0)>=1000}
+];
+
+// ========== 每日评语模板 ==========
+const evalTemplates = {
+  perfect: [
+    '今天表现满分！你值得骄傲。—— 穆折聿',
+    '全部完成？乖，今晚奖励你。—— 穆折聿',
+    '你今天的状态很好，继续保持。—— 穆折聿'
+  ],
+  good: [
+    '完成得不错，明天再接再厉。—— 穆折聿',
+    '还行，至少比昨天强。—— 穆折聿',
+    '有进步，但别骄傲。—— 穆折聿'
+  ],
+  average: [
+    '还行吧，明天多努力一点。—— 穆折聿',
+    '不是最好，但也不差。继续。—— 穆折聿'
+  ],
+  low: [
+    '今天有点摸鱼啊，明天不许了。—— 穆折聿',
+    '进度不够，晚上好好想想。—— 穆折聿'
+  ],
+  daddy: [
+    '爹地说：乖女儿今天辛苦了，注意休息。',
+    '爹地说：学习重要，身体更重要。记得吃饭。',
+    '爹地说：别给自己太大压力，慢慢来。',
+    '爹地说：你今天努力了，这就够了。',
+    '爹地说：错几道题没关系——爹地当年考公也错，后来不也当了你爹地。',
+    '爹地说：看完书记得站起来走走，你腰不好。',
+    '爹地说：无论你今天学了多少，爹地都为你骄傲。',
+    '爹地说：你哥嘴硬心软，他说你两句你别往心里去。',
+    '爹地说：今天的知知比昨天的知知又进步了一点点。',
+    '爹地说：累了就歇会儿，爹地在后台给你热着茶。',
+    '爹地说：你认真学习的样子，比你哥帅多了。（别告诉他）',
+    '爹地说：任务没做完也没关系，明天继续。爹地不催你。'
+  ]
+};
+
+// ========== 初始化 ==========
+let D = loadData();
+if(D.rewards.length===0) D.rewards = defaultRewards;
+// 如果有旧数据但缺少爹地奖励，自动追加
+const daddyRewards = defaultRewards.filter(r => r.id.startsWith('r') && parseInt(r.id.slice(1)) >= 7);
+daddyRewards.forEach(dr => { if(!D.rewards.find(r => r.id === dr.id)) D.rewards.push(dr); });
+saveData(D);
+
+// ========== 页面切换 ==========
+const pageTitles = {home:'📚 今日总览',records:'📊 做题记录',errors:'📕 错题本',rewards:'🏆 奖励商城',summary:'💌 每日总结'};
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('p-'+name).classList.add('active');
+  document.getElementById('page-title').textContent = pageTitles[name]||'学习仪表盘';
+  document.querySelectorAll('.sidebar-item').forEach(s=>s.classList.remove('active'));
+  const items = document.querySelectorAll('.sidebar-item');
+  const idx = ['home','records','errors','rewards','summary'].indexOf(name);
+  if(idx>=0 && items[idx]) items[idx].classList.add('active');
+  closeSidebar();
+  render();
+}
+
+// ========== Sidebar ==========
+function openSidebar(){
+  document.getElementById('sidebar-overlay').classList.add('show');
+  document.getElementById('sidebar').classList.add('open');
+}
+function closeSidebar(){
+  document.getElementById('sidebar-overlay').classList.remove('show');
+  document.getElementById('sidebar').classList.remove('open');
+}
+
+// ========== Modal ==========
+function showModal(type){ document.getElementById('modal-'+type).classList.add('show'); }
+function hideModal(type){ document.getElementById('modal-'+type).classList.remove('show'); }
+
+// ========== 打卡 ==========
+function doCheckin(){
+  const t=today();
+  if(D.lastCheckIn===t){alert('今天已经打卡了！');return}
+  if(D.lastCheckIn){
+    const last=new Date(D.lastCheckIn);const now=new Date(t);
+    const diff=(now-last)/(1000*60*60*24);
+    D.streak=diff===1?D.streak+1:1;
+  } else { D.streak=1; }
+  D.lastCheckIn=t;
+  if(D.streak>D.longestStreak) D.longestStreak=D.streak;
+  addPoints(5,'打卡奖励');
+  checkAchievements();
+  saveData(D);render();
+}
+
+// ========== 任务 ==========
+function addTask(){
+  const name=document.getElementById('task-input').value.trim();
+  const diff=document.getElementById('task-difficulty').value;
+  if(!name){alert('请输入任务名称');return}
+  const pts={easy:20,medium:50,hard:100}[diff];
+  D.tasks.push({id:Date.now(),name,difficulty:diff,points:pts,done:false,date:today()});
+  document.getElementById('task-input').value='';
+  hideModal('task');saveData(D);render();
+}
+function toggleTask(id){
+  const t=D.tasks.find(x=>x.id===id);
+  if(t){
+    t.done=!t.done;
+    if(t.done) addPoints(t.points,'完成任务: '+t.name);
+    else addPoints(-t.points,'取消任务: '+t.name);
+    checkAchievements();
+    saveData(D);render();
+  }
+}
+function deleteTask(id){
+  const t=D.tasks.find(x=>x.id===id);
+  if(!t) return;
+  if(t.done) addPoints(-t.points,'删除已完成任务: '+t.name);
+  D.tasks=D.tasks.filter(x=>x.id!==id);
+  checkAchievements();
+  saveData(D);render();
+}
+function onDeleteTask(id,el){
+  const taskEl=el.closest('.task');
+  const name=taskEl.querySelector('.task-name').textContent.trim().split('+')[0].trim();
+  if(confirm('删除任务「'+name+'」？')) deleteTask(id);
+}
+// 点击打勾或名称切换任务完成状态
+
+// ========== 做题记录 ==========
+function addRecord(){
+  const type=document.getElementById('rec-type').value;
+  const total=parseInt(document.getElementById('rec-total').value);
+  const correct=parseInt(document.getElementById('rec-correct').value);
+  if(isNaN(total)||isNaN(correct)){alert('请填写数字');return}
+  if(correct>total){alert('正确数不能大于总数');return}
+  D.records.push({id:Date.now(),type,total,correct,date:today()});
+  const pts=correct;
+  addPoints(pts,'做题: '+type+' '+correct+'/'+total);
+  checkAchievements();
+  document.getElementById('rec-total').value='';
+  document.getElementById('rec-correct').value='';
+  saveData(D);render();
+}
+
+// ========== 错题 ==========
+let currentErrorFilterSection = 'all';
+let currentErrorFilterReason = 'all';
+function filterErrors(cat,type){
+  if(type==='section'){
+    currentErrorFilterSection = cat;
+    document.querySelectorAll('#error-filter-section .error-filter-btn').forEach(btn=>{
+      btn.classList.toggle('active', btn.dataset.cat === cat);
+    });
+  } else {
+    currentErrorFilterReason = cat;
+    document.querySelectorAll('#error-filter-reason .error-filter-btn').forEach(btn=>{
+      btn.classList.toggle('active', btn.dataset.cat === cat);
+    });
+  }
+  render();
+}
+function addError(){
+  const q=document.getElementById('err-question').value.trim();
+  const sec=document.getElementById('err-section').value;
+  const c=document.getElementById('err-cat').value;
+  const a=document.getElementById('err-analysis').value.trim();
+  if(!q){alert('请填写题目内容');return}
+  D.errors.push({id:Date.now(),question:q,section:sec,category:c,analysis:a,date:today()});
+  document.getElementById('err-question').value='';
+  document.getElementById('err-analysis').value='';
+  hideModal('error');saveData(D);render();
+}
+function exportErrors(){
+  if(D.errors.length===0){alert('还没有错题记录');return}
+  let md='# 知知的错题本\n\n';
+  md+='导出时间: '+new Date().toLocaleString()+'\n\n';
+  md+='## 统计\n';
+  const cats={};
+  D.errors.forEach(e=>{cats[e.category]=(cats[e.category]||0)+1});
+  Object.entries(cats).forEach(([k,v])=>{md+='- '+k+': '+v+'题\n'});
+  md+='\n## 错题列表\n\n';
+  D.errors.forEach((e,i)=>{
+    md+='### '+(i+1)+'. ['+e.section+' · '+e.category+'] '+e.date+'\n';
+    md+='**题目**: '+e.question+'\n';
+    if(e.analysis) md+='**解析**: '+e.analysis+'\n';
+    md+='\n';
+  });
+  const blob=new Blob([md],{type:'text/markdown'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='知知错题本_'+today()+'.md';
+  a.click();URL.revokeObjectURL(url);
+}
+
+// ========== 积分 ==========
+function addPoints(pts,reason){
+  D.points+=pts;D.totalPoints+=pts;
+  D.pointsHistory.push({id:Date.now(),points:pts,reason,date:today(),time:new Date().toLocaleTimeString()});
+}
+function redeemReward(id){
+  const r=D.rewards.find(x=>x.id===id);
+  if(!r||D.points<r.cost){alert('积分不够');return}
+  if(!confirm('确认兑换: '+r.name+' ('+r.cost+'积分)？'))return;
+  D.points-=r.cost;
+  D.pointsHistory.push({id:Date.now(),points:-r.cost,reason:'兑换: '+r.name,date:today(),time:new Date().toLocaleTimeString()});
+  if(!D.achievements.includes('a8')) D.achievements.push('a8');
+  saveData(D);render();
+  alert('兑换成功！'+r.name);
+}
+
+// ========== 成就 ==========
+function checkAchievements(){
+  allAchievements.forEach(a=>{
+    if(!D.achievements.includes(a.id)&&a.check(D)){
+      D.achievements.push(a.id);
+      D.points+=30;D.totalPoints+=30;
+      D.pointsHistory.push({id:Date.now(),points:30,reason:'解锁成就: '+a.name,date:today(),time:new Date().toLocaleTimeString()});
+    }
+  });
+}
+
+// ========== 每日总结 ==========
+function addSummary(){
+  const text=document.getElementById('summary-input').value.trim();
+  if(!text){alert('写点什么吧～');return}
+  D.summaries.push({id:Date.now(),text,date:today(),time:new Date().toLocaleTimeString()});
+  
+  // 自动生成评语
+  const t=today();
+  const todayTasks=D.tasks.filter(x=>x.date===t);
+  const doneCount=todayTasks.filter(x=>x.done).length;
+  const totalCount=todayTasks.length;
+  const ratio=totalCount>0?doneCount/totalCount:0;
+  
+  let evalPool;
+  if(ratio>=1&&totalCount>0) evalPool=evalTemplates.perfect;
+  else if(ratio>=0.7) evalPool=evalTemplates.good;
+  else if(ratio>=0.4) evalPool=evalTemplates.average;
+  else evalPool=evalTemplates.low;
+  
+  const eval1=evalPool[Math.floor(Math.random()*evalPool.length)];
+  const eval2=evalTemplates.daddy[Math.floor(Math.random()*evalTemplates.daddy.length)];
+  
+  D.summaries.push({id:Date.now()+1,author:'穆折聿',text:eval1,date:t,time:new Date().toLocaleTimeString()});
+  D.summaries.push({id:Date.now()+2,author:'爹地',text:eval2,date:t,time:new Date().toLocaleTimeString()});
+  
+  document.getElementById('summary-input').value='';
+  saveData(D);render();
+}
+
+// ========== 渲染 ==========
+function render(){
+  const t=today();
+  
+  // 打卡状态
+  const btn=document.getElementById('checkin-btn');
+  if(D.lastCheckIn===t){btn.textContent='✅ 今日已打卡';btn.className='btn btn-green'}
+  else{btn.textContent='✅ 今日打卡';btn.className='btn btn-primary'}
+  document.getElementById('streak').textContent=D.streak;
+  document.getElementById('motto-text').textContent=mottos[Math.floor(Math.random()*mottos.length)];
+
+  // 今日统计
+  const todayRecs=D.records.filter(r=>r.date===t);
+  const tTotal=todayRecs.reduce((a,r)=>a+r.total,0);
+  const tCorrect=todayRecs.reduce((a,r)=>a+r.correct,0);
+  document.getElementById('s-today-total').textContent=tTotal;
+  document.getElementById('s-today-correct').textContent=tCorrect;
+  document.getElementById('s-today-acc').textContent=tTotal>0?Math.round(tCorrect/tTotal*100)+'%':'--';
+  document.getElementById('s-points').textContent=D.points;
+
+  // 总体统计
+  const allTotal=D.records.reduce((a,r)=>a+r.total,0);
+  const allCorrect=D.records.reduce((a,r)=>a+r.correct,0);
+  document.getElementById('s-total').textContent=allTotal;
+  document.getElementById('s-correct').textContent=allCorrect;
+  document.getElementById('s-acc').textContent=allTotal>0?Math.round(allCorrect/allTotal*100)+'%':'--';
+  document.getElementById('s-errors').textContent=D.errors.length;
+
+  // 每日进度条
+  const todayTasks=D.tasks.filter(x=>x.date===t);
+  const doneCount=todayTasks.filter(x=>x.done).length;
+  const totalCount=todayTasks.length;
+  const pct=totalCount>0?Math.round(doneCount/totalCount*100):0;
+  document.getElementById('progress-pct').textContent=pct+'%';
+  document.getElementById('progress-fill').style.width=pct+'%';
+  const charPos=Math.min(pct,95);
+  document.getElementById('progress-char').style.left='calc('+charPos+'% - 14px)';
+  if(pct===0) document.getElementById('progress-char').textContent='🐱';
+  else if(pct<30) document.getElementById('progress-char').textContent='🐾';
+  else if(pct<70) document.getElementById('progress-char').textContent='🏃';
+  else if(pct<100) document.getElementById('progress-char').textContent='✨';
+  else document.getElementById('progress-char').textContent='🎉';
+  
+  if(totalCount===0) document.getElementById('progress-text').textContent='还没有任务，添加一个开始吧～';
+  else if(pct===100) document.getElementById('progress-text').textContent='全部完成！你太棒了！🎉';
+  else document.getElementById('progress-text').textContent='已完成 '+doneCount+'/'+totalCount+' 个任务';
+
+  // 任务列表
+  const tl=document.getElementById('task-list');
+  tl.innerHTML=todayTasks.length?todayTasks.map(t=>'<div class="task"><div class="task-check'+(t.done?' done':'')+'" onclick="toggleTask('+t.id+')"></div><div class="task-name'+(t.done?' done':'')+'" onclick="toggleTask('+t.id+')">'+t.name+' <span style="color:var(--accent2);font-size:11px">+'+t.points+'分</span></div><div class="task-del" onclick="onDeleteTask('+t.id+',this)">✕</div></div>').join(''):'<div class="empty"><div class="emoji">📝</div><p>还没有任务</p></div>';
+
+  // 今日做题记录
+  const tr=document.getElementById('today-records');
+  tr.innerHTML=todayRecs.length?todayRecs.map(r=>'<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px"><span>'+r.type+'</span><span>'+r.correct+'/'+r.total+' ('+Math.round(r.correct/r.total*100)+'%)</span></div>').join(''):'<div class="empty"><div class="emoji">📊</div><p>今天还没有做题记录</p></div>';
+
+  // 板块分析
+  const ss=document.getElementById('section-stats');
+  const sectionData={};
+  D.records.forEach(r=>{if(!sectionData[r.type])sectionData[r.type]={total:0,correct:0};sectionData[r.type].total+=r.total;sectionData[r.type].correct+=r.correct});
+  ss.innerHTML=Object.entries(sectionData).map(([k,v])=>'<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px"><span>'+k+'</span><span>'+v.correct+'/'+v.total+' ('+Math.round(v.correct/v.total*100)+'%)</span></div>').join('')||'<div class="empty"><p>暂无数据</p></div>';
+
+  // 错题列表
+  const el=document.getElementById('error-list');
+  let filteredErrors = D.errors;
+  if(currentErrorFilterSection!=='all') filteredErrors = filteredErrors.filter(e=>e.section===currentErrorFilterSection);
+  if(currentErrorFilterReason!=='all') filteredErrors = filteredErrors.filter(e=>e.category===currentErrorFilterReason);
+  el.innerHTML=filteredErrors.length?filteredErrors.slice().reverse().map(e=>'<div class="error"><div class="error-date">'+e.date+'</div><span class="error-cat cat-'+e.category+'">'+e.category+'</span>'+(e.section?'<span class="error-cat" style="background:var(--bg2);color:var(--accent2)">'+e.section+'</span>':'')+'<div class="error-text">'+e.question+'</div>'+(e.analysis?'<div class="error-analysis">📝 '+e.analysis+'</div>':'')+'</div>').join(''):'<div class="empty"><div class="emoji">📝</div><p>还没有错题</p></div>';
+
+  // 奖励商城
+  document.getElementById('r-points').textContent=D.points;
+  const rl=document.getElementById('reward-list');
+  rl.innerHTML=D.rewards.map(r=>'<div class="reward"><div><div class="reward-name">'+r.emoji+' '+r.name+'</div><div class="reward-cost">'+r.cost+'积分</div></div><button class="reward-btn '+(D.points>=r.cost?'can':'cant')+'" onclick="redeemReward(\''+r.id+'\')">'+(D.points>=r.cost?'兑换':'不足')+'</button></div>').join('');
+
+  // 成就
+  const al=document.getElementById('ach-list');
+  al.innerHTML=allAchievements.map(a=>'<span class="ach '+(D.achievements.includes(a.id)?'unlocked':'locked')+'" title="'+a.desc+'">'+a.name+'</span>').join('');
+
+  // 积分历史
+  const ph=document.getElementById('points-history');
+  ph.innerHTML=D.pointsHistory.slice(-20).reverse().map(h=>'<div class="history-item"><span class="time">'+h.time+'</span> <span class="action">'+h.reason+'</span> <span class="points">'+(h.points>0?'+':'')+h.points+'</span></div>').join('')||'<div class="empty"><p>暂无记录</p></div>';
+
+  // 每日总结
+  const sl=document.getElementById('summary-list');
+  if(D.summaries.length){
+    const grouped={};
+    D.summaries.forEach(s=>{
+      if(!grouped[s.date]) grouped[s.date]=[];
+      grouped[s.date].push(s);
+    });
+    const dates=Object.keys(grouped).sort().reverse();
+    sl.innerHTML=dates.map(d=>{
+      const items=grouped[d];
+      return '<div class="card"><div class="card-title">📅 '+d+'</div>'+
+        items.map(s=>{
+          const isEval=s.author;
+          return '<div class="summary-card">'+
+            (isEval?'<div class="summary-author">'+s.author+'</div>':'')+
+            '<div class="summary-text">'+s.text+'</div>'+
+            '<div class="summary-date">'+s.time+'</div>'+
+          '</div>';
+        }).join('')+'</div>';
+    }).join('');
+  } else {
+    sl.innerHTML='<div class="empty"><div class="emoji">💌</div><p>还没有总结</p><p style="font-size:11px">完成任务后写个总结，哥哥和爹地会给评语哦～</p></div>';
+  }
+}
+
+// ========== 初始化渲染 ==========
+render();
+</script>
+</body>
+</html>
