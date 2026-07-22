@@ -830,13 +830,20 @@ function addError(){
 function exportErrorsHTML(){
   const filteredErrors=getFilteredErrors();
   if(filteredErrors.length===0){alert('没有可导出的错题');return}
-  let html='<div style="padding:16px;font-family:sans-serif;color:#333">';
-  html+='<h2 style="text-align:center;margin-bottom:4px">📕 知知的错题本</h2>';
-  html+='<p style="text-align:center;color:#888;font-size:12px;margin-bottom:16px">长按下方文字复制</p>';
-  html+='<div style="background:#f5f5f5;padding:12px;border-radius:8px;font-size:13px;line-height:1.8;white-space:pre-wrap;user-select:all;-webkit-user-select:all">';
-  let txt='📕 知知的错题本\n';
-  txt+='导出时间：'+new Date().toLocaleString()+' | 共'+filteredErrors.length+'题\n';
-  txt+='━━━━━━━━━━━━━━━━━━━━\n\n';
+  let html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>错题本</title>';
+  html+='<style>';
+  html+='body{font-family:sans-serif;padding:20px;max-width:700px;margin:0 auto;color:#333;font-size:13px;line-height:1.6}';
+  html+='h1{text-align:center;font-size:18px;margin:0 0 4px}';
+  html+='.info{text-align:center;color:#888;font-size:11px;margin-bottom:16px}';
+  html+='h2{font-size:14px;color:#555;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #eee}';
+  html+='.item{margin-bottom:14px;padding:10px;background:#f9f9f9;border-radius:6px;page-break-inside:avoid}';
+  html+='.q{font-weight:bold;margin-bottom:4px}';
+  html+='.tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:3px;background:#FFE4E0;color:#c44;margin-bottom:4px}';
+  html+='.a{color:#666;margin-top:4px;padding-top:4px;border-top:1px dashed #ddd}';
+  html+='@media print{body{padding:10px;font-size:12px}.item{break-inside:avoid}}';
+  html+='</style></head><body>';
+  html+='<h1>📕 知知的错题本</h1>';
+  html+='<div class="info">导出时间：'+new Date().toLocaleString()+' | 共'+filteredErrors.length+'题</div>';
   const grouped={};
   filteredErrors.forEach(e=>{
     const sec=e.section||'未分类';
@@ -844,23 +851,26 @@ function exportErrorsHTML(){
     grouped[sec].push(e);
   });
   Object.entries(grouped).forEach(([sec,errors])=>{
-    txt+='【'+sec+'】（'+errors.length+'题）\n\n';
+    html+='<h2>'+sec+'（'+errors.length+'题）</h2>';
     errors.forEach((e,i)=>{
-      txt+=(i+1)+'. '+e.question+'\n';
-      txt+='   错因：'+e.category+'\n';
-      if(e.analysis) txt+='   解析：'+e.analysis+'\n';
-      txt+='\n';
+      html+='<div class="item">';
+      html+='<div class="tag">'+e.category+'</div>';
+      html+='<div class="q">'+(i+1)+'. '+e.question+'</div>';
+      if(e.analysis) html+='<div class="a">📝 '+e.analysis+'</div>';
+      html+='</div>';
     });
   });
-  html+=txt.replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  html+='</div>';
-  html+='<p style="text-align:center;margin-top:12px;font-size:11px;color:#aaa">👆 全选文字，长按复制，粘贴到笔记软件</p>';
-  html+='</div>';
-  document.getElementById('export-result').innerHTML=html;
-  document.getElementById('export-result').style.display='block';
-  document.getElementById('export-result').scrollIntoView({behavior:'smooth'});
+  html+='<p style="text-align:center;margin-top:20px;color:#aaa;font-size:11px">—— 穆折聿监工出品 ——</p>';
+  html+='</body></html>';
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='知知错题本_'+today()+'.html';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  URL.revokeObjectURL(url);
   filteredErrors.forEach(e=>{e.exported=true});
   saveData(D);render();
+  alert('下载成功！用浏览器打开这个文件，然后点"分享→打印→保存为PDF"');
 }
 function exportDailyReport(){
   const t=today();
