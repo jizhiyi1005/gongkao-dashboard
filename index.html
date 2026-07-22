@@ -394,13 +394,19 @@ textarea.input{resize:vertical}
 <!-- 错题分类筛选 -->
 <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap" id="error-filter-section">
   <div class="error-filter-btn active" data-cat="all" onclick="filterErrors('all','section')">全部</div>
-  <div class="error-filter-btn" data-cat="资料分析" onclick="filterErrors('资料分析','section')">资料分析</div>
-  <div class="error-filter-btn" data-cat="数量关系" onclick="filterErrors('数量关系','section')">数量关系</div>
-  <div class="error-filter-btn" data-cat="言语理解" onclick="filterErrors('言语理解','section')">言语理解</div>
-  <div class="error-filter-btn" data-cat="判断推理" onclick="filterErrors('判断推理','section')">判断推理</div>
+  <div class="error-filter-btn" data-cat="资料分析" onclick="filterErrors('资料分析','section')">资料</div>
+  <div class="error-filter-btn" data-cat="数量关系" onclick="filterErrors('数量关系','section')">数量</div>
+  <div class="error-filter-btn" data-cat="言语理解" onclick="filterErrors('言语理解','section')">言语</div>
+  <div class="error-filter-btn" data-cat="判断推理" onclick="filterErrors('判断推理','section')">判断</div>
   <div class="error-filter-btn" data-cat="图推" onclick="filterErrors('图推','section')">图推</div>
   <div class="error-filter-btn" data-cat="常识" onclick="filterErrors('常识','section')">常识</div>
   <div class="error-filter-btn" data-cat="政治理论" onclick="filterErrors('政治理论','section')">政治理论</div>
+</div>
+<div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap" id="error-filter-time">
+  <div class="error-filter-btn active" data-cat="all" onclick="filterErrors('all','time')">全部时间</div>
+  <div class="error-filter-btn" data-cat="week" onclick="filterErrors('week','time')">本周</div>
+  <div class="error-filter-btn" data-cat="lastweek" onclick="filterErrors('lastweek','time')">上周</div>
+  <div class="error-filter-btn" data-cat="unexported" onclick="filterErrors('unexported','time')">未导出</div>
 </div>
 <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap" id="error-filter-reason">
   <div class="error-filter-btn active" data-cat="all" onclick="filterErrors('all','reason')">全部原因</div>
@@ -764,19 +770,51 @@ function importData(){
 // ========== 错题 ==========
 let currentErrorFilterSection = 'all';
 let currentErrorFilterReason = 'all';
+let currentErrorFilterTime = 'all';
+function getWeekRange(weeksAgo){
+  const now=new Date();
+  const day=now.getDay()||7;
+  const start=new Date(now);
+  start.setDate(now.getDate()-day+1-weeksAgo*7);
+  start.setHours(0,0,0,0);
+  const end=new Date(start);
+  end.setDate(start.getDate()+6);
+  end.setHours(23,59,59,999);
+  return{start,end};
+}
 function filterErrors(cat,type){
   if(type==='section'){
-    currentErrorFilterSection = cat;
+    currentErrorFilterSection=cat;
     document.querySelectorAll('#error-filter-section .error-filter-btn').forEach(btn=>{
-      btn.classList.toggle('active', btn.dataset.cat === cat);
+      btn.classList.toggle('active',btn.dataset.cat===cat);
+    });
+  } else if(type==='time'){
+    currentErrorFilterTime=cat;
+    document.querySelectorAll('#error-filter-time .error-filter-btn').forEach(btn=>{
+      btn.classList.toggle('active',btn.dataset.cat===cat);
     });
   } else {
-    currentErrorFilterReason = cat;
+    currentErrorFilterReason=cat;
     document.querySelectorAll('#error-filter-reason .error-filter-btn').forEach(btn=>{
-      btn.classList.toggle('active', btn.dataset.cat === cat);
+      btn.classList.toggle('active',btn.dataset.cat===cat);
     });
   }
   render();
+}
+function getFilteredErrors(){
+  let list=D.errors;
+  if(currentErrorFilterSection!=='all') list=list.filter(e=>e.section===currentErrorFilterSection);
+  if(currentErrorFilterReason!=='all') list=list.filter(e=>e.category===currentErrorFilterReason);
+  if(currentErrorFilterTime==='week'){
+    const{start,end}=getWeekRange(0);
+    list=list.filter(e=>{const d=new Date(e.date);return d>=start&&d<=end;});
+  } else if(currentErrorFilterTime==='lastweek'){
+    const{start,end}=getWeekRange(1);
+    list=list.filter(e=>{const d=new Date(e.date);return d>=start&&d<=end;});
+  } else if(currentErrorFilterTime==='unexported'){
+    list=list.filter(e=>!e.exported);
+  }
+  return list;
 }
 function addError(){
   const q=document.getElementById('err-question').value.trim();
@@ -790,13 +828,14 @@ function addError(){
   hideModal('error');saveData(D);render();
 }
 function exportErrorsHTML(){
-  if(D.errors.length===0){alert('还没有错题记录');return}
+  const filteredErrors=getFilteredErrors();
+  if(filteredErrors.length===0){alert('没有可导出的错题');return}
   let html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>错题本</title>';
   html+='<style>body{font-family:sans-serif;padding:30px;max-width:700px;margin:0 auto;color:#333}';
   html+='h1{text-align:center;font-size:20px;margin-bottom:5px}';
   html+='.info{text-align:center;color:#888;font-size:12px;margin-bottom:20px}';
   html+='h2{font-size:15px;color:#555;margin:20px 0 10px;padding-bottom:5px;border-bottom:1px solid #eee}';
-  html+'.item{margin-bottom:16px;padding:12px;background:#f9f9f9;border-radius:8px}';
+  html+='.item{margin-bottom:16px;padding:12px;background:#f9f9f9;border-radius:8px}';
   html+='.q{font-size:13px;font-weight:bold;margin-bottom:6px}';
   html+='.tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:4px;margin-right:6px;margin-bottom:6px}';
   html+='.tag-reason{background:#FFE4E0;color:#c44}';
@@ -804,9 +843,9 @@ function exportErrorsHTML(){
   html+='@media print{body{padding:15px}.item{break-inside:avoid}}';
   html+='</style></head><body>';
   html+='<h1>📕 知知的错题本</h1>';
-  html+='<div class="info">导出时间：'+new Date().toLocaleString()+' | 共'+D.errors.length+'题</div>';
+  html+='<div class="info">导出时间：'+new Date().toLocaleString()+' | 共'+filteredErrors.length+'题</div>';
   const grouped={};
-  D.errors.forEach(e=>{
+  filteredErrors.forEach(e=>{
     const sec=e.section||'未分类';
     if(!grouped[sec]) grouped[sec]=[];
     grouped[sec].push(e);
@@ -828,6 +867,9 @@ function exportErrorsHTML(){
   a.href=url;a.download='知知错题本_'+today()+'.html';
   document.body.appendChild(a);a.click();document.body.removeChild(a);
   URL.revokeObjectURL(url);
+  // 标记为已导出
+  filteredErrors.forEach(e=>{e.exported=true});
+  saveData(D);render();
 }
 function exportDailyReport(){
   const t=today();
@@ -996,10 +1038,8 @@ function render(){
 
   // 错题列表
   const el=document.getElementById('error-list');
-  let filteredErrors = D.errors;
-  if(currentErrorFilterSection!=='all') filteredErrors = filteredErrors.filter(e=>e.section===currentErrorFilterSection);
-  if(currentErrorFilterReason!=='all') filteredErrors = filteredErrors.filter(e=>e.category===currentErrorFilterReason);
-  el.innerHTML=filteredErrors.length?filteredErrors.slice().reverse().map(e=>'<div class="error"><div class="error-date">'+e.date+'</div><span class="error-cat cat-'+e.category+'">'+e.category+'</span>'+(e.section?'<span class="error-cat" style="background:var(--bg2);color:var(--accent2)">'+e.section+'</span>':'')+'<div class="error-text">'+e.question+'</div>'+(e.analysis?'<div class="error-analysis">📝 '+e.analysis+'</div>':'')+'</div>').join(''):'<div class="empty"><div class="emoji">📝</div><p>还没有错题</p></div>';
+  const filteredErrors=getFilteredErrors();
+  el.innerHTML=filteredErrors.length?filteredErrors.slice().reverse().map(e=>'<div class="error"'+(e.exported?' style="opacity:0.6"':'')+'><div class="error-date">'+e.date+(e.exported?' ✅已导出':'')+'</div><span class="error-cat cat-'+e.category+'">'+e.category+'</span>'+(e.section?'<span class="error-cat" style="background:var(--bg2);color:var(--accent2)">'+e.section+'</span>':'')+'<div class="error-text">'+e.question+'</div>'+(e.analysis?'<div class="error-analysis">📝 '+e.analysis+'</div>':'')+'</div>').join(''):'<div class="empty"><div class="emoji">📝</div><p>还没有错题</p></div>';
 
   // 奖励商城
   document.getElementById('r-points').textContent=D.points;
