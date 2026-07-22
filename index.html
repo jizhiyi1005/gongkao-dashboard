@@ -791,8 +791,20 @@ function addError(){
 }
 function exportErrorsHTML(){
   if(D.errors.length===0){alert('还没有错题记录');return}
-  let html='<h2 style="text-align:center">📕 知知的错题本</h2>';
-  html+='<p style="text-align:center;color:#666">导出时间：'+new Date().toLocaleString()+' | 共'+D.errors.length+'题</p>';
+  let html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>错题本</title>';
+  html+='<style>body{font-family:sans-serif;padding:30px;max-width:700px;margin:0 auto;color:#333}';
+  html+='h1{text-align:center;font-size:20px;margin-bottom:5px}';
+  html+='.info{text-align:center;color:#888;font-size:12px;margin-bottom:20px}';
+  html+='h2{font-size:15px;color:#555;margin:20px 0 10px;padding-bottom:5px;border-bottom:1px solid #eee}';
+  html+'.item{margin-bottom:16px;padding:12px;background:#f9f9f9;border-radius:8px}';
+  html+='.q{font-size:13px;font-weight:bold;margin-bottom:6px}';
+  html+='.tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:4px;margin-right:6px;margin-bottom:6px}';
+  html+='.tag-reason{background:#FFE4E0;color:#c44}';
+  html+='.a{font-size:12px;color:#666;line-height:1.6;margin-top:6px;padding-top:6px;border-top:1px dashed #ddd}';
+  html+='@media print{body{padding:15px}.item{break-inside:avoid}}';
+  html+='</style></head><body>';
+  html+='<h1>📕 知知的错题本</h1>';
+  html+='<div class="info">导出时间：'+new Date().toLocaleString()+' | 共'+D.errors.length+'题</div>';
   const grouped={};
   D.errors.forEach(e=>{
     const sec=e.section||'未分类';
@@ -800,16 +812,22 @@ function exportErrorsHTML(){
     grouped[sec].push(e);
   });
   Object.entries(grouped).forEach(([sec,errors])=>{
-    html+='<h3 style="margin-top:16px">'+sec+'（'+errors.length+'题）</h3>';
-    html+='<table style="width:100%;border-collapse:collapse;font-size:12px"><tr style="background:#f5f5f5"><th style="border:1px solid #ddd;padding:6px">序号</th><th style="border:1px solid #ddd;padding:6px">日期</th><th style="border:1px solid #ddd;padding:6px">原因</th><th style="border:1px solid #ddd;padding:6px">题目</th><th style="border:1px solid #ddd;padding:6px">解析</th></tr>';
+    html+='<h2>'+sec+'（'+errors.length+'题）</h2>';
     errors.forEach((e,i)=>{
-      html+='<tr><td style="border:1px solid #ddd;padding:6px">'+(i+1)+'</td><td style="border:1px solid #ddd;padding:6px">'+e.date+'</td><td style="border:1px solid #ddd;padding:6px">'+e.category+'</td><td style="border:1px solid #ddd;padding:6px">'+e.question+'</td><td style="border:1px solid #ddd;padding:6px">'+(e.analysis||'-')+'</td></tr>';
+      html+='<div class="item">';
+      html+='<div class="tag tag-reason">'+e.category+'</div>';
+      html+='<div class="q">'+(i+1)+'. '+e.question+'</div>';
+      if(e.analysis) html+='<div class="a">📝 '+e.analysis+'</div>';
+      html+='</div>';
     });
-    html+='</table>';
   });
-  document.getElementById('export-result').innerHTML=html;
-  document.getElementById('export-result').style.display='block';
-  document.getElementById('export-result').scrollIntoView({behavior:'smooth'});
+  html+='</body></html>';
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='知知错题本_'+today()+'.html';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 function exportDailyReport(){
   const t=today();
@@ -818,27 +836,45 @@ function exportDailyReport(){
   const tTotal=todayRecs.reduce((a,r)=>a+r.total,0);
   const tCorrect=todayRecs.reduce((a,r)=>a+r.correct,0);
   const acc=tTotal>0?Math.round(tCorrect/tTotal*100):0;
-  let html='<h2 style="text-align:center">📊 知知的学习日报</h2>';
-  html+='<p style="text-align:center;color:#666">'+t+'</p>';
-  html+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0">';
-  html+='<div style="text-align:center;border:1px solid #ddd;border-radius:8px;padding:12px"><div style="font-size:11px;color:#888">做题</div><div style="font-size:20px;font-weight:bold">'+tTotal+'</div></div>';
-  html+='<div style="text-align:center;border:1px solid #ddd;border-radius:8px;padding:12px"><div style="font-size:11px;color:#888">正确</div><div style="font-size:20px;font-weight:bold;color:green">'+tCorrect+'</div></div>';
-  html+='<div style="text-align:center;border:1px solid #ddd;border-radius:8px;padding:12px"><div style="font-size:11px;color:#888">正确率</div><div style="font-size:20px;font-weight:bold;color:#e67e22">'+acc+'%</div></div>';
-  html+='<div style="text-align:center;border:1px solid #ddd;border-radius:8px;padding:12px"><div style="font-size:11px;color:#888">积分</div><div style="font-size:20px;font-weight:bold;color:#3498db">'+D.points+'</div></div>';
+  let html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>今日报告</title>';
+  html+='<style>body{font-family:sans-serif;padding:30px;max-width:700px;margin:0 auto;color:#333}';
+  html+='h1{text-align:center;font-size:20px;margin-bottom:5px}';
+  html+='.info{text-align:center;color:#888;font-size:12px;margin-bottom:20px}';
+  html+='.stats{display:flex;gap:12px;margin:16px 0}';
+  html+='.stat{flex:1;text-align:center;padding:12px;background:#f9f9f9;border-radius:8px}';
+  html+='.stat .num{font-size:22px;font-weight:bold}';
+  html+='.stat .lbl{font-size:11px;color:#888;margin-top:2px}';
+  html+='h2{font-size:15px;color:#555;margin:20px 0 10px;padding-bottom:5px;border-bottom:1px solid #eee}';
+  html+='.item{padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:13px}';
+  html+='@media print{body{padding:15px}}';
+  html+='</style></head><body>';
+  html+='<h1>📊 学习日报</h1>';
+  html+='<div class="info">'+t+'</div>';
+  html+='<div class="stats">';
+  html+='<div class="stat"><div class="num">'+tTotal+'</div><div class="lbl">做题</div></div>';
+  html+='<div class="stat"><div class="num" style="color:#4caf50">'+tCorrect+'</div><div class="lbl">正确</div></div>';
+  html+='<div class="stat"><div class="num" style="color:#ff9800">'+acc+'%</div><div class="lbl">正确率</div></div>';
+  html+='<div class="stat"><div class="num" style="color:#2196f3">'+D.points+'</div><div class="lbl">积分</div></div>';
   html+='</div>';
   if(todayTasks.length){
-    html+='<h3>📋 任务</h3><table style="width:100%;border-collapse:collapse;font-size:12px"><tr style="background:#f5f5f5"><th style="border:1px solid #ddd;padding:6px">任务</th><th style="border:1px solid #ddd;padding:6px">状态</th></tr>';
-    todayTasks.forEach(t=>{html+='<tr><td style="border:1px solid #ddd;padding:6px">'+t.name+'</td><td style="border:1px solid #ddd;padding:6px">'+(t.done?'✅':'⬜')+'</td></tr>'});
-    html+='</table>';
+    html+='<h2>📋 任务（'+todayTasks.filter(x=>x.done).length+'/'+todayTasks.length+'）</h2>';
+    todayTasks.forEach(t=>{
+      html+='<div class="item">'+(t.done?'✅':'⬜')+' '+t.name+'</div>';
+    });
   }
   if(todayRecs.length){
-    html+='<h3 style="margin-top:12px">📝 做题</h3><table style="width:100%;border-collapse:collapse;font-size:12px"><tr style="background:#f5f5f5"><th style="border:1px solid #ddd;padding:6px">板块</th><th style="border:1px solid #ddd;padding:6px">正确率</th></tr>';
-    todayRecs.forEach(r=>{html+='<tr><td style="border:1px solid #ddd;padding:6px">'+r.type+'</td><td style="border:1px solid #ddd;padding:6px">'+r.correct+'/'+r.total+' ('+Math.round(r.correct/r.total*100)+'%)</td></tr>'});
-    html+='</table>';
+    html+='<h2>📝 做题</h2>';
+    todayRecs.forEach(r=>{
+      html+='<div class="item">'+r.type+'：'+r.correct+'/'+r.total+'（'+Math.round(r.correct/r.total*100)+'%）</div>';
+    });
   }
-  document.getElementById('export-result').innerHTML=html;
-  document.getElementById('export-result').style.display='block';
-  document.getElementById('export-result').scrollIntoView({behavior:'smooth'});
+  html+='</body></html>';
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='学习日报_'+t+'.html';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 // ========== 积分 ==========
